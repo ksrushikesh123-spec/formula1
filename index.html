@@ -1,0 +1,1433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#090b0e">
+  <title>F1 Ultimate Pit Strategist | Baku Prototype</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #090b0e;
+      --panel: #11151a;
+      --panel-2: #161b21;
+      --line: #252c34;
+      --muted: #929ba5;
+      --text: #f4f6f8;
+      --red: #e10600;
+      --red-bright: #ff4038;
+      --green: #60dc9b;
+      --amber: #f4bd55;
+      --blue: #66b9f2;
+      --radius: 14px;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-width: 320px;
+      background:
+        radial-gradient(ellipse at 74% -12%, rgba(225, 6, 0, .13), transparent 38rem),
+        var(--bg);
+      color: var(--text);
+    }
+    button, select, input { font: inherit; }
+    button { color: inherit; }
+    .app-shell { max-width: 1600px; margin: 0 auto; padding: 0 28px 40px; }
+    .topbar {
+      height: 72px; display: flex; align-items: center; justify-content: space-between;
+      border-bottom: 1px solid var(--line); gap: 16px;
+    }
+    .brand { display: flex; align-items: center; gap: 12px; font-size: 14px; font-weight: 850; letter-spacing: .04em; }
+    .brand-mark {
+      width: 34px; height: 34px; display: grid; place-items: center; border-radius: 9px;
+      background: var(--red); font-size: 15px; font-style: italic; font-weight: 950;
+      box-shadow: 0 5px 18px rgba(225, 6, 0, .28);
+    }
+    .brand span { color: var(--muted); font-weight: 600; }
+    .topbar-right { display: flex; align-items: center; gap: 14px; color: var(--muted); font-size: 11px; }
+    .sim-tag {
+      display: inline-flex; align-items: center; gap: 7px; border: 1px solid rgba(244, 189, 85, .3);
+      color: var(--amber); background: rgba(244, 189, 85, .08); padding: 7px 10px; border-radius: 99px;
+      font-size: 10px; font-weight: 800; letter-spacing: .09em; text-transform: uppercase;
+    }
+    .sim-tag::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+    .hero { padding: 27px 0 20px; display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; }
+    .eyebrow { color: var(--red-bright); font-size: 10px; letter-spacing: .17em; text-transform: uppercase; font-weight: 850; margin-bottom: 8px; }
+    h1 { font-size: clamp(25px, 3vw, 37px); line-height: 1.05; margin: 0; letter-spacing: -.045em; }
+    .hero p { color: var(--muted); font-size: 13px; margin: 9px 0 0; }
+    .race-controls { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+    .button {
+      border: 1px solid var(--line); background: var(--panel-2); border-radius: 8px; padding: 10px 13px;
+      cursor: pointer; font-size: 11px; font-weight: 750; transition: .18s ease;
+    }
+    .button:hover { border-color: #59616b; transform: translateY(-1px); }
+    .button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px solid var(--red-bright); outline-offset: 2px; }
+    .button.primary { border-color: var(--red); background: var(--red); }
+    .button.primary:hover { background: #c80500; }
+    .button.danger { color: #ff807b; }
+    .button.small { padding: 8px 10px; font-size: 10px; }
+    .button.selected { border-color: var(--red); color: #fff; background: rgba(225, 6, 0, .18); }
+    .racebar {
+      display: grid; grid-template-columns: auto minmax(140px, 1fr) auto auto; align-items: center; gap: 16px;
+      background: linear-gradient(100deg, #171b20, #11151a); border: 1px solid var(--line); border-radius: 12px;
+      padding: 15px 18px; margin-bottom: 17px;
+    }
+    .lap-readout { min-width: 82px; }
+    .lap-readout strong { font-size: 23px; letter-spacing: -.04em; }
+    .lap-readout small, .progress-label { color: var(--muted); font-size: 10px; }
+    .progress-wrap { min-width: 80px; }
+    .progress-label { display: flex; justify-content: space-between; margin-bottom: 7px; }
+    .progress-track { height: 6px; background: #282f37; border-radius: 99px; overflow: hidden; }
+    .progress-fill { height: 100%; width: 58.5%; background: linear-gradient(90deg, var(--red), #ff574f); border-radius: inherit; transition: width .3s; }
+    .race-condition { display: flex; align-items: center; gap: 8px; border-left: 1px solid var(--line); padding-left: 17px; }
+    .status-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--green); box-shadow: 0 0 12px currentColor; }
+    .status-dot.sc { background: var(--amber); color: var(--amber); }
+    .status-dot.vsc { background: var(--blue); color: var(--blue); }
+    .race-condition strong { display: block; font-size: 11px; }
+    .race-condition small { color: var(--muted); font-size: 9px; }
+    .dashboard {
+      display: grid; grid-template-columns: minmax(0, 1.58fr) minmax(330px, .92fr);
+      gap: 17px; align-items: start;
+    }
+    .main-column, .side-column { display: grid; gap: 17px; min-width: 0; }
+    .panel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+    .panel-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 16px 18px 12px; }
+    .panel-title { font-size: 12px; font-weight: 850; letter-spacing: .01em; }
+    .panel-subtitle { display: block; margin-top: 4px; color: var(--muted); font-size: 10px; font-weight: 450; }
+    .live-label { color: var(--green); font-size: 9px; font-weight: 850; letter-spacing: .12em; text-transform: uppercase; }
+    .track-panel { min-height: 290px; }
+    .track-wrap { height: 226px; padding: 0 16px 12px; position: relative; }
+    .track-svg { width: 100%; height: 100%; display: block; }
+    .track-base { fill: none; stroke: #242a31; stroke-width: 26; stroke-linecap: round; stroke-linejoin: round; }
+    .track-edge { fill: none; stroke: #46505a; stroke-width: 1.2; stroke-dasharray: 3 5; }
+    .track-line { fill: none; stroke: #e2e7eb; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+    .car-motion-label { position: absolute; top: 9px; left: 23px; display: flex; align-items: center; gap: 6px; z-index: 1; border: 1px solid #303942; background: #101419e8; border-radius: 99px; padding: 5px 8px; color: #aab3bc; font-size: 8px; font-weight: 800; letter-spacing: .08em; }
+    .car-motion-dot { width: 6px; height: 6px; border-radius: 50%; background: #65717c; }
+    .track-panel.is-racing .car-motion-label { border-color: rgba(96, 220, 155, .4); color: var(--green); }
+    .track-panel.is-racing .car-motion-dot { background: var(--green); box-shadow: 0 0 8px var(--green); }
+    .race-car-group { filter: drop-shadow(0 2px 3px #000b); }
+    .race-car-tire { fill: #080a0c; stroke: #9099a2; stroke-width: .8; }
+    .race-car-body { fill: #e10600; stroke: #ff8b85; stroke-width: .8; stroke-linejoin: round; }
+    .race-car-detail { fill: #f0f2f4; }
+    .race-car-cockpit { fill: #1b242c; stroke: #e6ebef; stroke-width: .8; }
+    .car-view-panel { min-width: 0; }
+    .car-view-controls { display: flex; align-items: center; gap: 5px; }
+    .car-view-controls .button { padding: 7px 9px; font-size: 9px; }
+    .car-view-scene {
+      --road-speed: 1.6s;
+      position: relative; height: 265px; overflow: hidden; display: grid; place-items: center;
+      perspective: 950px; isolation: isolate;
+      background: radial-gradient(ellipse at 50% 47%, #28313a 0, #171c22 45%, #101419 80%);
+    }
+    .car-view-scene::before {
+      content: ""; position: absolute; z-index: -1; left: -20%; right: -20%; bottom: -85px; height: 170px;
+      transform: rotateX(58deg); transform-origin: center top;
+      background: repeating-linear-gradient(90deg, transparent 0 75px, #aeb9c41b 76px 78px),
+        repeating-linear-gradient(0deg, #14191f 0 28px, #222a32 29px 30px);
+      border-top: 2px solid #87919a;
+    }
+    .car-view-scene::after {
+      content: ""; position: absolute; z-index: -1; bottom: 25px; left: -10%; width: 120%; height: 3px;
+      background: repeating-linear-gradient(90deg, transparent 0 26px, #e6e9ec 27px 56px, transparent 57px 85px);
+      opacity: .72; transform: perspective(420px) rotateX(54deg);
+    }
+    .car-view-horizon { position: absolute; left: 0; right: 0; top: 39%; height: 1px; background: linear-gradient(90deg, transparent, #74808b66 20%, #a6b1bb99 50%, #74808b66 80%, transparent); }
+    .car-view-status { position: absolute; left: 15px; top: 13px; display: flex; align-items: center; gap: 7px; z-index: 2; color: #aeb7bf; font-size: 8px; font-weight: 850; letter-spacing: .1em; }
+    .car-view-status .car-motion-dot { background: #68737d; }
+    .car-view-scene.is-racing .car-view-status { color: var(--green); }
+    .car-view-scene.is-racing .car-view-status .car-motion-dot { background: var(--green); box-shadow: 0 0 8px var(--green); }
+    .car-model-stage {
+      width: min(92%, 740px); height: 100%; z-index: 1; display: grid; place-items: center;
+      transform-style: preserve-3d; transform: rotateX(7deg) rotateY(-7deg);
+      transition: transform .6s cubic-bezier(.2,.75,.3,1);
+    }
+    .car-model-svg { width: 100%; max-height: 250px; overflow: visible; filter: drop-shadow(0 16px 11px #000b); }
+    .car-view-scene.camera-front .car-model-stage { transform: rotateX(8deg) rotateY(18deg) scale(.91); }
+    .car-view-scene.camera-side .car-model-stage { transform: rotateX(1deg) rotateY(-2deg) scale(1.03); }
+    .car-view-scene.camera-overhead .car-model-stage { transform: rotateX(48deg) rotateY(-7deg) scale(.94); }
+    .car3d-rubber { fill: url(#tireRubber); stroke: #69737c; stroke-width: 3; }
+    .car3d-wheel-face { fill: #242c34; stroke: #a7b0b8; stroke-width: 2; }
+    .car3d-hub { fill: #bec6cd; stroke: #58636e; stroke-width: 2; }
+    .car3d-body { fill: url(#bodyRed); stroke: #ff8e87; stroke-width: 2; stroke-linejoin: round; }
+    .car3d-body-dark { fill: #8b0808; stroke: #ec4a43; stroke-width: 1.5; stroke-linejoin: round; }
+    .car3d-highlight { fill: #ffaaa4; opacity: .86; }
+    .car3d-carbon { fill: #171d23; stroke: #65717b; stroke-width: 2; stroke-linejoin: round; }
+    .car3d-wing { fill: #d90702; stroke: #ff8e87; stroke-width: 1.5; stroke-linejoin: round; }
+    .car3d-glass { fill: #19232c; stroke: #bbc4cb; stroke-width: 2; }
+    .car3d-suspension { fill: none; stroke: #adb7bf; stroke-width: 3; stroke-linecap: round; }
+    .car3d-spinner { transform-box: fill-box; transform-origin: center; }
+    .car-view-scene.is-racing .car3d-spinner { animation: wheel-spin .2s linear infinite; }
+    .car-view-scene.is-racing .car-model-stage { animation: car-race-bob .65s ease-in-out infinite alternate; }
+    .car-view-scene.is-racing::after { animation: road-dashes .42s linear infinite; }
+    .car-view-caption { position: absolute; right: 15px; bottom: 12px; z-index: 2; color: #7d8892; font-size: 8px; letter-spacing: .08em; }
+    @keyframes car-race-bob { to { translate: 0 4px; } }
+    @keyframes road-dashes { to { background-position: -85px 0; } }
+    .track-sector { font-size: 10px; fill: #aab3bc; font-weight: 700; letter-spacing: .08em; }
+    .track-city { font-size: 9px; fill: #64707b; }
+    .track-start { fill: var(--red); stroke: #fff; stroke-width: 2; }
+    .map-caption { position: absolute; right: 22px; bottom: 17px; color: #808b96; font-size: 9px; }
+    .metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: var(--line); border-top: 1px solid var(--line); }
+    .metric { background: #11151a; padding: 14px 15px; min-width: 0; }
+    .metric-label { color: var(--muted); font-size: 9px; text-transform: uppercase; letter-spacing: .1em; }
+    .metric-value { margin-top: 7px; font-weight: 850; font-size: 21px; letter-spacing: -.04em; white-space: nowrap; }
+    .metric-value small { font-size: 10px; color: var(--muted); font-weight: 600; letter-spacing: 0; }
+    .metric-note { color: var(--muted); font-size: 9px; margin-top: 4px; }
+    .green { color: var(--green); }
+    .red { color: #ff6963; }
+    .amber { color: var(--amber); }
+    .blue { color: var(--blue); }
+    .weather-row { display: flex; align-items: center; gap: 12px; padding: 0 17px 14px; }
+    .weather-icon { font-size: 25px; }
+    .weather-copy { flex: 1; }
+    .weather-copy strong { font-size: 11px; display: block; }
+    .weather-copy small { font-size: 9px; color: var(--muted); }
+    .risk-meter { width: 78px; }
+    .risk-meter small { color: var(--muted); font-size: 8px; display: block; margin-bottom: 5px; }
+    .risk-track { height: 5px; background: #2a3037; border-radius: 99px; overflow: hidden; }
+    .risk-fill { width: 64%; height: 100%; background: var(--blue); border-radius: inherit; transition: width .25s; }
+    .weather-controls { display: flex; padding: 0 17px 15px; gap: 6px; }
+    .weather-choice { flex: 1; text-align: center; padding: 7px 5px; font-size: 9px; }
+    .advisor { border-color: rgba(225, 6, 0, .35); background: linear-gradient(145deg, rgba(225, 6, 0, .08), #11151a 54%); }
+    .advisor-top { display: flex; align-items: center; gap: 9px; }
+    .advisor-icon { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 8px; background: rgba(225, 6, 0, .18); color: #ff716c; font-size: 14px; }
+    .advisor-action { margin: 4px 18px 0; font-size: 18px; line-height: 1.25; letter-spacing: -.03em; }
+    .advisor-copy { color: #b3bbc3; font-size: 11px; line-height: 1.6; margin: 8px 18px 15px; }
+    .advisor-facts { display: flex; gap: 7px; flex-wrap: wrap; margin: 0 18px 17px; }
+    .fact-chip { border: 1px solid #303942; background: rgba(255,255,255,.025); border-radius: 5px; padding: 5px 7px; font-size: 9px; color: #b8c0c8; }
+    .strategy-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 0 18px 17px; }
+    .strategy-actions .button { padding: 10px 8px; }
+    .choice-list { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 0 17px 16px; }
+    .field { min-width: 0; }
+    .field label { display: block; color: var(--muted); text-transform: uppercase; font-size: 8px; letter-spacing: .1em; margin: 0 0 6px 2px; }
+    select {
+      width: 100%; appearance: none; color: var(--text); background: #1b2026; border: 1px solid #313943;
+      border-radius: 7px; padding: 9px 28px 9px 10px; font-size: 10px; cursor: pointer;
+      background-image: linear-gradient(45deg, transparent 50%, #9ca6b0 50%), linear-gradient(135deg, #9ca6b0 50%, transparent 50%);
+      background-position: calc(100% - 13px) 13px, calc(100% - 9px) 13px;
+      background-size: 4px 4px, 4px 4px; background-repeat: no-repeat;
+    }
+    select option { background: #171b20; }
+    .driving-row { padding: 0 17px 16px; }
+    .segmented { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
+    .segment { padding: 8px 4px; font-size: 9px; text-align: center; }
+    .priority-row { border-top: 1px solid var(--line); padding: 13px 17px 15px; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+    .priority-label { color: var(--muted); text-transform: uppercase; letter-spacing: .1em; font-size: 8px; }
+    .priority-choices { display: flex; gap: 5px; }
+    .priority-choices .button { font-size: 9px; padding: 7px 8px; }
+    .wear-control { padding: 0 17px 15px; }
+    .wear-control-head { display: flex; justify-content: space-between; align-items: center; color: var(--muted); font-size: 9px; margin-bottom: 8px; }
+    .wear-control-head strong { color: var(--text); font-size: 11px; }
+    input[type="range"] { width: 100%; accent-color: var(--red); cursor: pointer; }
+    .pit-estimate { display: flex; justify-content: space-between; align-items: center; padding: 12px 17px; border-top: 1px solid var(--line); }
+    .pit-estimate span { color: var(--muted); font-size: 9px; }
+    .pit-estimate strong { font-size: 12px; }
+    .rivals { padding: 0 17px 13px; }
+    .rival-row { display: grid; grid-template-columns: 30px 1fr auto auto; gap: 8px; align-items: center; padding: 9px 0; border-top: 1px solid #242a30; font-size: 10px; }
+    .rival-pos { color: var(--muted); font-weight: 800; }
+    .rival-name { font-weight: 750; }
+    .rival-name small { display: block; color: var(--muted); font-size: 8px; font-weight: 500; margin-top: 3px; }
+    .tire-mini { width: 8px; height: 8px; display: inline-block; border-radius: 50%; border: 2px solid #ed4540; margin-right: 5px; vertical-align: middle; }
+    .tire-mini.medium { border-color: #f1c64c; }
+    .tire-mini.hard { border-color: #e7e9eb; }
+    .tire-mini.intermediate { border-color: #55c77d; }
+    .tire-mini.wet { border-color: #4caaf0; }
+    .rival-status { color: var(--muted); font-size: 8px; text-align: right; }
+    .rival-status.pitted { color: var(--amber); }
+    .telemetry-note { margin: 0 17px 12px; padding: 8px 9px; border: 1px solid rgba(244, 189, 85, .2); border-radius: 7px; background: rgba(244, 189, 85, .05); color: #c4a96f; font-size: 9px; line-height: 1.45; }
+    .sensor-group { padding: 0 17px 14px; }
+    .sensor-group-title { color: var(--muted); font-size: 8px; letter-spacing: .1em; text-transform: uppercase; margin: 0 0 7px; }
+    .sensor-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+    .sensor-card { padding: 8px; min-width: 0; border: 1px solid #272f37; border-radius: 7px; background: #151a20; }
+    .sensor-topline { display: flex; justify-content: space-between; align-items: baseline; gap: 4px; }
+    .sensor-label { color: #aeb7bf; font-size: 8px; }
+    .sensor-value { color: var(--text); font-size: 11px; font-weight: 800; white-space: nowrap; }
+    .sensor-value small { color: var(--muted); font-size: 8px; font-weight: 550; }
+    .sensor-bar { height: 3px; margin-top: 7px; overflow: hidden; background: #2a3037; border-radius: 99px; }
+    .sensor-bar-fill { height: 100%; width: 50%; border-radius: inherit; background: var(--green); transition: width .25s ease, background-color .25s ease; }
+    .sensor-hint { margin-top: 4px; color: #747f89; font-size: 7px; }
+    .compare-panel { grid-column: 1 / -1; }
+    .compare-head-note { color: var(--muted); font-size: 9px; }
+    .strategy-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 0 17px 17px; }
+    .strategy-card { min-width: 0; border: 1px solid var(--line); border-radius: 10px; background: #14191e; padding: 13px; transition: border-color .2s, transform .2s; }
+    .strategy-card.recommended { border-color: rgba(225, 6, 0, .65); background: linear-gradient(150deg, rgba(225, 6, 0, .1), #14191e 58%); }
+    .strategy-card:hover { transform: translateY(-2px); }
+    .strategy-card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+    .strategy-card h3 { font-size: 11px; margin: 0; }
+    .strategy-badge { color: var(--red-bright); font-size: 8px; text-transform: uppercase; letter-spacing: .08em; font-weight: 850; }
+    .strategy-description { font-size: 9px; line-height: 1.45; color: var(--muted); min-height: 27px; margin: 7px 0 11px; }
+    .strategy-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
+    .strategy-stat { border-top: 1px solid #2b3239; padding-top: 8px; }
+    .strategy-stat small { display: block; color: var(--muted); font-size: 7px; text-transform: uppercase; letter-spacing: .07em; }
+    .strategy-stat strong { display: block; margin-top: 4px; font-size: 11px; }
+    .strategy-risk { margin-top: 9px; display: flex; align-items: center; justify-content: space-between; font-size: 8px; color: var(--muted); }
+    .risk-dots { letter-spacing: 2px; color: var(--amber); }
+    .strategy-card .button { width: 100%; margin-top: 10px; padding: 8px; font-size: 9px; }
+    .kit-section { padding: 0 17px 17px; }
+    .kit-group + .kit-group { margin-top: 18px; }
+    .kit-group-title { color: var(--muted); font-size: 9px; text-transform: uppercase; letter-spacing: .1em; margin: 0 0 8px; }
+    .kit-grid { display: grid; gap: 8px; }
+    .tire-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+    .accessory-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .kit-card {
+      min-width: 0; border: 1px solid var(--line); border-radius: 9px; background: #151a20;
+      padding: 8px; text-align: center; transition: .18s ease;
+    }
+    button.kit-card { width: 100%; cursor: pointer; }
+    button.kit-card:hover { border-color: #626d78; transform: translateY(-2px); }
+    button.kit-card.selected { border-color: var(--red); background: rgba(225, 6, 0, .09); box-shadow: inset 0 0 0 1px rgba(225, 6, 0, .16); }
+    button.kit-card:focus-visible { outline: 2px solid var(--red-bright); outline-offset: 2px; }
+    .kit-art { height: 88px; display: grid; place-items: center; border-radius: 6px; background: radial-gradient(ellipse at 50% 80%, #242c34, #101419 75%); overflow: hidden; }
+    .kit-art svg { width: 100%; height: 100%; max-width: 120px; }
+    .kit-card strong { display: block; margin-top: 7px; font-size: 10px; }
+    .kit-card small { display: block; margin-top: 4px; color: var(--muted); font-size: 8px; line-height: 1.35; }
+    .tire-illustration .rubber { fill: #111417; stroke: #353c43; stroke-width: 5; }
+    .tire-illustration .shoulder { fill: none; stroke: #59616a; stroke-width: 2; }
+    .tire-illustration .groove { fill: none; stroke: #293036; stroke-width: 2; stroke-dasharray: 3 3; }
+    .tire-illustration .compound-band { fill: none; stroke: var(--compound); stroke-width: 4; }
+    .tire-illustration .rim { fill: #252d35; stroke: #89929b; stroke-width: 2; }
+    .tire-illustration .hub { fill: #9ba5ae; }
+    .tire-illustration .spoke { stroke: #aeb7bf; stroke-width: 2; stroke-linecap: round; }
+    .tire-card[data-gallery-compound="Soft"] { --compound: #e10600; }
+    .tire-card[data-gallery-compound="Medium"] { --compound: #f2ca46; }
+    .tire-card[data-gallery-compound="Hard"] { --compound: #edf0f2; }
+    .tire-card[data-gallery-compound="Intermediate"] { --compound: #57cf7b; }
+    .tire-card[data-gallery-compound="Wet"] { --compound: #58baff; }
+    .accessory-art .item-shadow { fill: #0007; }
+    .accessory-art .metal { fill: #8f9ba5; stroke: #c1cad1; stroke-width: 2; stroke-linejoin: round; }
+    .accessory-art .dark-metal { fill: #333c45; stroke: #77838d; stroke-width: 2; stroke-linejoin: round; }
+    .accessory-art .accent { fill: var(--red); }
+    .accessory-art .glass { fill: #141c23; stroke: #5e6a74; stroke-width: 2; }
+    .kit-note { color: #77828c; font-size: 8px; margin: 10px 1px 0; }
+    .events-list { padding: 0 17px 14px; max-height: 150px; overflow: auto; }
+    .event { border-top: 1px solid #242a30; padding: 9px 0; display: grid; grid-template-columns: 40px 1fr; gap: 7px; }
+    .event-time { color: var(--red-bright); font-size: 8px; font-weight: 800; }
+    .event-text { color: #b7c0c8; font-size: 9px; line-height: 1.45; }
+    .event-text strong { color: var(--text); }
+    .footer-note { text-align: center; color: #6f7983; font-size: 9px; line-height: 1.5; padding: 20px 10px 0; }
+    .toast-region { position: fixed; right: 22px; bottom: 20px; z-index: 5; display: grid; gap: 8px; width: min(350px, calc(100vw - 32px)); }
+    .toast { background: #20262d; border: 1px solid #3a444e; border-left: 3px solid var(--red); border-radius: 8px; padding: 11px 13px; font-size: 10px; line-height: 1.45; box-shadow: 0 10px 34px #0008; animation: toast-in .2s ease-out; }
+    .toast strong { display: block; font-size: 10px; margin-bottom: 3px; }
+    .toast.success { border-left-color: var(--green); }
+    .race-start-overlay { position: fixed; inset: 0; z-index: 20; display: grid; align-content: center; gap: 28px; overflow: hidden; visibility: hidden; opacity: 0; background: radial-gradient(ellipse at 50% 45%, #181d23 0, #080a0c 70%); transition: opacity .22s ease, visibility .22s; }
+    .race-start-overlay.active { visibility: visible; opacity: 1; }
+    .start-overlay-heading { position: relative; z-index: 1; text-align: center; }
+    .start-overlay-heading span { display: block; color: var(--red-bright); font-size: 10px; font-weight: 900; letter-spacing: .22em; }
+    .start-overlay-heading strong { display: block; margin-top: 8px; font-size: clamp(21px, 5vw, 38px); font-weight: 900; letter-spacing: -.05em; }
+    .start-overlay-heading small { display: block; margin-top: 8px; color: var(--muted); font-size: 10px; letter-spacing: .12em; }
+    .screen-racetrack { position: relative; height: 100px; border-top: 1px solid #424b55; border-bottom: 1px solid #424b55; background: linear-gradient(180deg, #151a20 0%, #252b32 48%, #151a20 100%); }
+    .screen-racetrack::before { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 2px; transform: translateY(-50%); background: repeating-linear-gradient(90deg, #d4d8dc 0 32px, transparent 32px 60px); opacity: .65; }
+    .race-start-overlay.active .screen-racetrack::before { animation: road-stripes .3s linear infinite; }
+    .screen-race-car { position: absolute; z-index: 1; left: 0; top: 50%; width: 154px; height: 72px; transform: translate(-170px, -50%); }
+    .race-start-overlay.active .screen-race-car { animation: cross-screen 2s cubic-bezier(.35, .08, .6, .98) forwards; }
+    .screen-car-svg { display: block; width: 100%; height: 100%; overflow: visible; filter: drop-shadow(0 0 12px #e1060080); }
+    .screen-car-wheel { transform-box: fill-box; transform-origin: center; }
+    .race-start-overlay.active .screen-car-wheel { animation: wheel-spin .18s linear infinite; }
+    .screen-car-rubber { fill: #08090a; stroke: #a7afb7; stroke-width: 2; }
+    .screen-car-body { fill: #e10600; stroke: #ff7670; stroke-width: 1.5; stroke-linejoin: round; }
+    .screen-car-trim { fill: #f1f3f5; }
+    .screen-car-cockpit { fill: #17212a; stroke: #d9dfe4; stroke-width: 1.5; }
+    .screen-car-wing { fill: #e10600; stroke: #ff7670; stroke-width: 1; }
+    .start-sequence-skip { position: absolute; top: 20px; right: 22px; border: 1px solid #424b55; border-radius: 7px; background: #11161b; padding: 9px 12px; color: #d6dbe0; cursor: pointer; font-size: 10px; font-weight: 750; }
+    .start-sequence-skip:hover { border-color: #818c97; }
+    @keyframes cross-screen { from { transform: translate(-170px, -50%); } to { transform: translate(calc(100vw + 180px), -50%); } }
+    @keyframes road-stripes { to { background-position: -60px 0; } }
+    @keyframes wheel-spin { to { transform: rotate(360deg); } }
+    @keyframes toast-in { from { opacity: 0; transform: translateY(7px); } to { opacity: 1; transform: translateY(0); } }
+    @media (max-width: 1000px) {
+      .app-shell { padding: 0 18px 30px; }
+      .dashboard { grid-template-columns: minmax(0, 1.2fr) minmax(300px, .9fr); }
+      .hero { align-items: flex-start; flex-direction: column; }
+      .race-controls { justify-content: flex-start; }
+    }
+    @media (max-width: 760px) {
+      .dashboard { grid-template-columns: 1fr; }
+      .side-column { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
+      .side-column .advisor, .side-column .controls-panel, .side-column .telemetry-panel { grid-column: span 2; }
+      .compare-panel { grid-column: auto; }
+      .racebar { grid-template-columns: auto 1fr; }
+      .race-condition { border-left: 0; padding-left: 0; }
+      .topbar-right > span:not(.sim-tag) { display: none; }
+    }
+    @media (max-width: 520px) {
+      .app-shell { padding: 0 12px 25px; }
+      .topbar { height: 60px; }
+      .brand { font-size: 11px; gap: 8px; }
+      .brand-mark { width: 30px; height: 30px; }
+      .hero { padding-top: 21px; }
+      .race-controls { display: grid; grid-template-columns: repeat(2, 1fr); width: 100%; }
+      .race-controls .button { padding: 10px 8px; }
+      .racebar { gap: 11px; padding: 12px; }
+      .metrics { grid-template-columns: repeat(2, 1fr); }
+      .metric { padding: 12px; }
+      .side-column { grid-template-columns: 1fr; }
+      .side-column .advisor, .side-column .controls-panel, .side-column .telemetry-panel { grid-column: auto; }
+      .strategy-cards { grid-template-columns: 1fr; }
+      .tire-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .strategy-description { min-height: auto; }
+      .compare-head-note { display: none; }
+      .track-wrap { height: 195px; padding: 0 8px 10px; }
+      .panel-head { padding-left: 14px; padding-right: 14px; }
+      .advisor-action, .advisor-copy { margin-left: 14px; margin-right: 14px; }
+      .advisor-facts { margin-left: 14px; margin-right: 14px; }
+      .strategy-actions { padding-left: 14px; padding-right: 14px; }
+      .kit-section { padding-left: 14px; padding-right: 14px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .race-start-overlay.active .screen-race-car { animation-duration: .8s; }
+      .race-start-overlay.active .screen-racetrack::before,
+      .race-start-overlay.active .screen-car-wheel,
+      .car-view-scene.is-racing .car3d-spinner,
+      .car-view-scene.is-racing .car-model-stage,
+      .car-view-scene.is-racing::after { animation: none; }
+      .car-model-stage { transition: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand"><div class="brand-mark">F1</div><div>ULTIMATE PIT STRATEGIST <span>/ PROTOTYPE</span></div></div>
+      <div class="topbar-right"><span>RACE CONTROL · BAKU</span><span class="sim-tag">Fictional simulation</span></div>
+    </header>
+
+    <section class="hero">
+      <div>
+        <div class="eyebrow">Race engineer console · Round 08</div>
+        <h1>F1 Ultimate Pit Strategist</h1>
+        <p>Baku City Circuit, Azerbaijan <span aria-hidden="true">·</span> 6.003 km <span aria-hidden="true">·</span> 53 laps</p>
+      </div>
+      <div class="race-controls" aria-label="Race controls">
+        <button class="button primary" id="startBtn">▶ Start Race</button>
+        <button class="button" id="pauseBtn" disabled>Ⅱ Pause</button>
+        <button class="button" id="nextLapBtn">Next Lap →</button>
+        <button class="button danger" id="resetBtn">↻ Reset Simulation</button>
+      </div>
+    </section>
+
+    <section class="racebar" aria-label="Race progress and status">
+      <div class="lap-readout"><strong id="lapValue">31</strong><small> / 53 LAPS</small></div>
+      <div class="progress-wrap">
+        <div class="progress-label"><span>RACE DISTANCE</span><span id="progressText">58%</span></div>
+        <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+      </div>
+      <div class="race-condition">
+        <span class="status-dot sc" id="statusDot"></span>
+        <div><strong id="raceStatus">SAFETY CAR</strong><small id="raceStatusNote">Deployed · reduced pace</small></div>
+      </div>
+      <div class="race-condition">
+        <span class="status-dot" style="background:var(--green);color:var(--green)"></span>
+        <div><strong id="runStatus">READY</strong><small>Simulation state</small></div>
+      </div>
+    </section>
+
+    <main class="dashboard">
+      <div class="main-column">
+        <section class="panel track-panel" id="trackPanel">
+          <div class="panel-head">
+            <div><div class="panel-title">Baku City Circuit <span class="panel-subtitle">Schematic layout · not an official track map</span></div></div>
+            <span class="live-label">● Track map</span>
+          </div>
+          <div class="track-wrap">
+            <div class="car-motion-label" id="carMotionLabel"><span class="car-motion-dot"></span><span id="carMotionText">CAR READY</span></div>
+            <svg class="track-svg" viewBox="0 0 720 220" role="img" aria-labelledby="trackTitle trackDesc">
+              <title id="trackTitle">Schematic illustration of the Baku City Circuit</title>
+              <desc id="trackDesc">A simplified street circuit route labeled with start-finish, the old town section, and the waterfront.</desc>
+              <path class="track-base" d="M75 146 L146 146 Q160 146 160 132 L160 86 Q160 74 173 74 L275 74 Q289 74 289 89 L289 126 Q289 139 302 139 L339 139 Q352 139 352 125 L352 65 Q352 51 367 51 L389 51 Q402 51 402 65 L402 161 Q402 174 416 174 L465 174 Q480 174 480 160 L480 132 Q480 119 494 119 L555 119 Q570 119 570 105 L570 79 Q570 65 584 65 L630 65 Q644 65 644 80 L644 126 Q644 142 629 142 L558 142 Q544 142 544 156 L544 177 Q544 190 529 190 L435 190 Q421 190 421 176 L421 158 Q421 145 407 145 L376 145 Q362 145 362 159 L362 177 Q362 190 347 190 L246 190 Q231 190 231 176 L231 161 Q231 147 217 147 L170 147 Q156 147 156 160 L156 174 Q156 188 142 188 L83 188 Q68 188 68 174 L68 153 Q68 139 82 139" />
+              <path class="track-edge" d="M75 146 L146 146 Q160 146 160 132 L160 86 Q160 74 173 74 L275 74 Q289 74 289 89 L289 126 Q289 139 302 139 L339 139 Q352 139 352 125 L352 65 Q352 51 367 51 L389 51 Q402 51 402 65 L402 161 Q402 174 416 174 L465 174 Q480 174 480 160 L480 132 Q480 119 494 119 L555 119 Q570 119 570 105 L570 79 Q570 65 584 65 L630 65 Q644 65 644 80 L644 126 Q644 142 629 142 L558 142 Q544 142 544 156 L544 177 Q544 190 529 190 L435 190 Q421 190 421 176 L421 158 Q421 145 407 145 L376 145 Q362 145 362 159 L362 177 Q362 190 347 190 L246 190 Q231 190 231 176 L231 161 Q231 147 217 147 L170 147 Q156 147 156 160 L156 174 Q156 188 142 188 L83 188 Q68 188 68 174 L68 153 Q68 139 82 139" />
+              <path id="carMotionPath" class="track-line" d="M75 146 L146 146 Q160 146 160 132 L160 86 Q160 74 173 74 L275 74 Q289 74 289 89 L289 126 Q289 139 302 139 L339 139 Q352 139 352 125 L352 65 Q352 51 367 51 L389 51 Q402 51 402 65 L402 161 Q402 174 416 174 L465 174 Q480 174 480 160 L480 132 Q480 119 494 119 L555 119 Q570 119 570 105 L570 79 Q570 65 584 65 L630 65 Q644 65 644 80 L644 126 Q644 142 629 142 L558 142 Q544 142 544 156 L544 177 Q544 190 529 190 L435 190 Q421 190 421 176 L421 158 Q421 145 407 145 L376 145 Q362 145 362 159 L362 177 Q362 190 347 190 L246 190 Q231 190 231 176 L231 161 Q231 147 217 147 L170 147 Q156 147 156 160 L156 174 Q156 188 142 188 L83 188 Q68 188 68 174 L68 153 Q68 139 82 139" />
+              <circle class="track-start" cx="75" cy="146" r="7"/>
+              <text class="track-sector" x="80" y="124">START / FINISH</text>
+              <text class="track-sector" x="196" y="60">OLD TOWN</text>
+              <text class="track-sector" x="463" y="103">WATERFRONT</text>
+              <text class="track-city" x="73" y="208">Schematic street circuit · clockwise</text>
+              <text class="track-city" x="304" y="116">CASTLE</text>
+              <text class="track-city" x="574" y="160">SECTOR 3</text>
+              <g id="raceCarMarker" class="race-car-group" transform="translate(75 146)" role="img" aria-label="Simulated race car on circuit">
+                <title>Our simulated car</title>
+                <rect class="race-car-tire" x="-10" y="-8" width="7" height="4" rx="1"/>
+                <rect class="race-car-tire" x="5" y="-8" width="7" height="4" rx="1"/>
+                <rect class="race-car-tire" x="-10" y="4" width="7" height="4" rx="1"/>
+                <rect class="race-car-tire" x="5" y="4" width="7" height="4" rx="1"/>
+                <path class="race-car-body" d="M-14-3h6l3-3h8l4 3h6v6H7l-4 3h-8l-3-3h-6z"/>
+                <path class="race-car-detail" d="M11-4h4v8h-4zM-14-4h2v8h-2z"/>
+                <path class="race-car-cockpit" d="M-4-3h6l2 3-2 3h-6l-2-3z"/>
+              </g>
+            </svg>
+            <div class="map-caption">ILLUSTRATIVE ROUTE ONLY</div>
+          </div>
+          <div class="metrics">
+            <div class="metric"><div class="metric-label">Your position</div><div class="metric-value" id="positionValue">P3 <small>/ 20</small></div><div class="metric-note green" id="positionNote">Podium fight</div></div>
+            <div class="metric"><div class="metric-label">Gap to P2</div><div class="metric-value" id="gapValue">+4.8<small>s</small></div><div class="metric-note">Estimated interval</div></div>
+            <div class="metric"><div class="metric-label">Tire condition</div><div class="metric-value" id="wearValue">68<small>% worn</small></div><div class="metric-note" id="tireLabel">Medium · used</div></div>
+            <div class="metric"><div class="metric-label">Track conditions</div><div class="metric-value" id="trackWeatherValue">DRY</div><div class="metric-note blue" id="rainValue">Rain risk 64%</div></div>
+          </div>
+        </section>
+
+        <section class="panel car-view-panel">
+          <div class="panel-head">
+            <div class="panel-title">3D race view <span class="panel-subtitle">Full-car render · illustrated 3D-style vector model</span></div>
+            <div class="car-view-controls" role="group" aria-label="Choose car camera angle">
+              <button class="button selected" type="button" data-car-camera="front" aria-pressed="true">3/4 view</button>
+              <button class="button" type="button" data-car-camera="side" aria-pressed="false">Side</button>
+              <button class="button" type="button" data-car-camera="overhead" aria-pressed="false">Top</button>
+            </div>
+          </div>
+          <div class="car-view-scene camera-front" id="carViewScene">
+            <div class="car-view-horizon"></div>
+            <div class="car-view-status"><span class="car-motion-dot"></span><span id="carViewStatusText">CAR IN GARAGE</span></div>
+            <div class="car-model-stage">
+              <svg class="car-model-svg" viewBox="0 0 760 310" role="img" aria-labelledby="modelTitle modelDesc">
+                <title id="modelTitle">Full-car 3D-style Formula racing car illustration</title>
+                <desc id="modelDesc">An original red open-wheel race car shown from an elevated three-quarter angle, including four tires, cockpit, halo, suspension, and aerodynamic wings.</desc>
+                <defs>
+                  <linearGradient id="bodyRed" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0" stop-color="#ff4b43"/><stop offset=".42" stop-color="#d80702"/><stop offset="1" stop-color="#790400"/>
+                  </linearGradient>
+                  <linearGradient id="tireRubber" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0" stop-color="#3a424a"/><stop offset=".3" stop-color="#101316"/><stop offset=".72" stop-color="#090b0d"/><stop offset="1" stop-color="#343b42"/>
+                  </linearGradient>
+                  <linearGradient id="floorGlow" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0" stop-color="#e10600" stop-opacity=".27"/><stop offset="1" stop-color="#e10600" stop-opacity="0"/>
+                  </linearGradient>
+                </defs>
+                <ellipse cx="381" cy="246" rx="258" ry="36" fill="url(#floorGlow)"/>
+                <ellipse cx="383" cy="253" rx="236" ry="17" fill="#050709" opacity=".75"/>
+
+                <g class="car3d-spinner">
+                  <path class="car3d-rubber" d="M190 176q-5-34 21-51 23-13 47 1l13 16-6 67-19 23q-28 7-46-10-11-18-10-46z"/>
+                  <ellipse class="car3d-wheel-face" cx="227" cy="174" rx="20" ry="32"/>
+                  <ellipse class="car3d-hub" cx="227" cy="174" rx="8" ry="14"/>
+                  <path class="car3d-rubber" d="M520 155q4-36 32-48 27-9 48 9l8 20-12 65-22 18q-26 2-43-18-12-19-11-46z"/>
+                  <ellipse class="car3d-wheel-face" cx="563" cy="157" rx="21" ry="33"/>
+                  <ellipse class="car3d-hub" cx="563" cy="157" rx="8" ry="14"/>
+                </g>
+
+                <path class="car3d-suspension" d="M207 134l46 46m-41 17 51-49m270 9 48 17m-44 27 53-48"/>
+
+                <path class="car3d-carbon" d="M119 144l84-14 7 16-70 18-33-3z"/>
+                <path class="car3d-wing" d="M102 136l115-12-10 11-79 16-28-4zm10 20 102-18-12 10-76 19-17-4z"/>
+                <path class="car3d-wing" d="M119 128l-5-10 83-10 13 14z"/>
+
+                <path class="car3d-body-dark" d="M200 153l65-28 49-25 72-16 64 13 47 28 66 18 43 16-19 20-85-3-55 29-110 21-94-22-57-10z"/>
+                <path class="car3d-body" d="M212 147l70-26 46-26 69-12 58 12 47 27 57 14 43 15-23 15-78-6-58 27-102 15-82-20-52-8z"/>
+                <path class="car3d-highlight" d="M277 122l54-25 68-12-45 22-61 25z"/>
+                <path class="car3d-body-dark" d="M336 169l93 8 53 29-71 23-92-19-38-22z"/>
+                <path class="car3d-body" d="M352 171l78 8 39 25-58 18-76-19-25-16z"/>
+                <path class="car3d-highlight" d="M355 178l73 7 27 18-48-12z"/>
+
+                <path class="car3d-carbon" d="M311 103l47-34 67-10 46 31-16 15-86-15-47 24z"/>
+                <path class="car3d-glass" d="M350 99l31-24 39-7 25 22-17 13-50-9z"/>
+                <path class="car3d-carbon" d="M343 99l35-38 6-20 7-2 3 24-28 42z"/>
+                <path class="car3d-carbon" d="M374 61l47-2 38 27-12 8-51-20-24 5z"/>
+                <path class="car3d-highlight" d="M360 93l27-21 35-6-29 15z"/>
+                <path class="car3d-wing" d="M378 43l7-8 17-1 3 5-10 5z"/>
+
+                <path class="car3d-carbon" d="M422 117l12-23 37-9 24 11-12 12-36 15z"/>
+                <path class="car3d-body" d="M440 117l35-20 34 7-16 20-40 12z"/>
+                <path class="car3d-highlight" d="M454 112l24-12 17 4-28 14z"/>
+
+                <path class="car3d-rubber" d="M182 226q-5-32 21-47 23-13 48 2l13 18-7 61-22 19q-27 6-44-13-10-18-9-40z"/>
+                <ellipse class="car3d-wheel-face" cx="221" cy="237" rx="21" ry="32"/>
+                <ellipse class="car3d-hub" cx="221" cy="237" rx="8" ry="14"/>
+                <path class="car3d-rubber" d="M502 211q3-36 32-49 28-10 50 10l9 22-13 60-23 18q-28 2-44-20-12-19-11-41z"/>
+                <ellipse class="car3d-wheel-face" cx="546" cy="216" rx="22" ry="34"/>
+                <ellipse class="car3d-hub" cx="546" cy="216" rx="8" ry="15"/>
+                <path class="car3d-suspension" d="M198 218l47 21m-37 22 49-49m278-8 48 11m-43 41 51-51"/>
+
+                <path class="car3d-wing" d="M549 139l77 13 35 17-8 8-77-13-37-13z"/>
+                <path class="car3d-carbon" d="M617 147l58 13 21 13-8 6-57-11-26-13z"/>
+                <path class="car3d-wing" d="M635 147l8-9 45 11 7 5-5 7z"/>
+                <path class="car3d-carbon" d="M648 139l4-10 42 9 2 6z"/>
+                <path d="M580 144l42 9m-7 19 23 5" stroke="#f8d8d5" stroke-width="2" opacity=".8"/>
+                <text x="394" y="143" fill="#fff" font-size="14" font-weight="900" font-style="italic" letter-spacing="1">F1</text>
+              </svg>
+            </div>
+            <div class="car-view-caption">ILLUSTRATIVE 3D-STYLE MODEL · NOT A SPECIFIC TEAM CAR</div>
+          </div>
+        </section>
+
+        <section class="panel compare-panel">
+          <div class="panel-head">
+            <div><div class="panel-title">Strategy comparison <span class="panel-subtitle">Illustrative estimates from current conditions</span></div></div>
+            <span class="compare-head-note">Select an option to apply its call</span>
+          </div>
+          <div class="strategy-cards" id="strategyCards"></div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head">
+            <div class="panel-title">Tire &amp; accessories gallery <span class="panel-subtitle">Illustrated race-day equipment · select a tire to set your next compound</span></div>
+          </div>
+          <div class="kit-section">
+            <div class="kit-group">
+              <h2 class="kit-group-title">Tire compounds</h2>
+              <div class="kit-grid tire-grid">
+                <button class="kit-card tire-card" data-gallery-compound="Soft" aria-label="Select Soft tire">
+                  <span class="kit-art">
+                    <svg class="tire-illustration" viewBox="0 0 100 100" role="img" aria-label="Illustration of a soft racing tire with red sidewall stripe">
+                      <circle class="rubber" cx="50" cy="50" r="39"/><circle class="shoulder" cx="50" cy="50" r="33"/><circle class="groove" cx="50" cy="50" r="36"/><circle class="compound-band" cx="50" cy="50" r="29"/>
+                      <circle class="rim" cx="50" cy="50" r="20"/><circle class="hub" cx="50" cy="50" r="5"/>
+                      <path class="spoke" d="M50 31v14m0 10v14M31 50h14m10 0h14M36.5 36.5l9.9 9.9m7.2 7.2 9.9 9.9m0-27-9.9 9.9m-7.2 7.2-9.9 9.9"/>
+                    </svg>
+                  </span><strong>Soft</strong><small>Fast warm-up · higher wear</small>
+                </button>
+                <button class="kit-card tire-card" data-gallery-compound="Medium" aria-label="Select Medium tire">
+                  <span class="kit-art">
+                    <svg class="tire-illustration" viewBox="0 0 100 100" role="img" aria-label="Illustration of a medium racing tire with yellow sidewall stripe">
+                      <circle class="rubber" cx="50" cy="50" r="39"/><circle class="shoulder" cx="50" cy="50" r="33"/><circle class="groove" cx="50" cy="50" r="36"/><circle class="compound-band" cx="50" cy="50" r="29"/>
+                      <circle class="rim" cx="50" cy="50" r="20"/><circle class="hub" cx="50" cy="50" r="5"/>
+                      <path class="spoke" d="M50 31v14m0 10v14M31 50h14m10 0h14M36.5 36.5l9.9 9.9m7.2 7.2 9.9 9.9m0-27-9.9 9.9m-7.2 7.2-9.9 9.9"/>
+                    </svg>
+                  </span><strong>Medium</strong><small>Balanced pace · wear</small>
+                </button>
+                <button class="kit-card tire-card" data-gallery-compound="Hard" aria-label="Select Hard tire">
+                  <span class="kit-art">
+                    <svg class="tire-illustration" viewBox="0 0 100 100" role="img" aria-label="Illustration of a hard racing tire with white sidewall stripe">
+                      <circle class="rubber" cx="50" cy="50" r="39"/><circle class="shoulder" cx="50" cy="50" r="33"/><circle class="groove" cx="50" cy="50" r="36"/><circle class="compound-band" cx="50" cy="50" r="29"/>
+                      <circle class="rim" cx="50" cy="50" r="20"/><circle class="hub" cx="50" cy="50" r="5"/>
+                      <path class="spoke" d="M50 31v14m0 10v14M31 50h14m10 0h14M36.5 36.5l9.9 9.9m7.2 7.2 9.9 9.9m0-27-9.9 9.9m-7.2 7.2-9.9 9.9"/>
+                    </svg>
+                  </span><strong>Hard</strong><small>Long life · slower warm-up</small>
+                </button>
+                <button class="kit-card tire-card" data-gallery-compound="Intermediate" aria-label="Select Intermediate tire">
+                  <span class="kit-art">
+                    <svg class="tire-illustration" viewBox="0 0 100 100" role="img" aria-label="Illustration of an intermediate racing tire with green sidewall stripe">
+                      <circle class="rubber" cx="50" cy="50" r="39"/><circle class="shoulder" cx="50" cy="50" r="33"/><circle class="groove" cx="50" cy="50" r="36"/><circle class="compound-band" cx="50" cy="50" r="29"/>
+                      <circle class="rim" cx="50" cy="50" r="20"/><circle class="hub" cx="50" cy="50" r="5"/>
+                      <path class="spoke" d="M50 31v14m0 10v14M31 50h14m10 0h14M36.5 36.5l9.9 9.9m7.2 7.2 9.9 9.9m0-27-9.9 9.9m-7.2 7.2-9.9 9.9"/>
+                    </svg>
+                  </span><strong>Intermediate</strong><small>Grooved · damp conditions</small>
+                </button>
+                <button class="kit-card tire-card" data-gallery-compound="Wet" aria-label="Select Wet tire">
+                  <span class="kit-art">
+                    <svg class="tire-illustration" viewBox="0 0 100 100" role="img" aria-label="Illustration of a wet racing tire with blue sidewall stripe">
+                      <circle class="rubber" cx="50" cy="50" r="39"/><circle class="shoulder" cx="50" cy="50" r="33"/><circle class="groove" cx="50" cy="50" r="36"/><circle class="compound-band" cx="50" cy="50" r="29"/>
+                      <circle class="rim" cx="50" cy="50" r="20"/><circle class="hub" cx="50" cy="50" r="5"/>
+                      <path class="spoke" d="M50 31v14m0 10v14M31 50h14m10 0h14M36.5 36.5l9.9 9.9m7.2 7.2 9.9 9.9m0-27-9.9 9.9m-7.2 7.2-9.9 9.9"/>
+                    </svg>
+                  </span><strong>Wet</strong><small>Deep grooves · heavy rain</small>
+                </button>
+              </div>
+            </div>
+            <div class="kit-group">
+              <h2 class="kit-group-title">Garage accessories</h2>
+              <div class="kit-grid accessory-grid">
+                <div class="kit-card">
+                  <span class="kit-art">
+                    <svg class="accessory-art" viewBox="0 0 150 100" role="img" aria-label="Illustration of a racing helmet">
+                      <ellipse class="item-shadow" cx="75" cy="86" rx="43" ry="7"/>
+                      <path class="dark-metal" d="M32 63c0-27 19-46 44-46 24 0 42 18 42 42v10H38c-4 0-6-2-6-6z"/>
+                      <path class="metal" d="M42 57c0-19 14-33 34-33 18 0 31 13 33 32l-33 10H43z"/>
+                      <path class="glass" d="M42 57h65l-31 13H46z"/>
+                      <path class="accent" d="M50 35c8-8 20-12 32-10l-8 8c-8 0-14 3-19 8z"/>
+                      <path class="dark-metal" d="M43 72h68l-7 8H49z"/>
+                      <circle cx="103" cy="51" r="2" fill="#e10600"/>
+                    </svg>
+                  </span><strong>Race helmet</strong><small>Protective headgear</small>
+                </div>
+                <div class="kit-card">
+                  <span class="kit-art">
+                    <svg class="accessory-art" viewBox="0 0 150 100" role="img" aria-label="Illustration of racing gloves">
+                      <ellipse class="item-shadow" cx="77" cy="86" rx="45" ry="6"/>
+                      <path class="dark-metal" d="M39 74l-8-21c-2-6 5-10 9-4l7 10-6-32c-1-7 8-8 10-1l5 23-1-30c0-7 9-7 10 0l3 29 3-26c1-7 10-6 10 1l-1 30 5-20c2-7 10-4 9 3l-4 32c-1 11-8 17-20 18H53c-6 0-11-4-14-12z"/>
+                      <path class="accent" d="M45 69l15-4 4 14-14 4z"/>
+                      <path d="M50 40l6 24m8-27 2 24m10-21-3 21" fill="none" stroke="#9aa5af" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
+                  </span><strong>Pit gloves</strong><small>Grip for quick service</small>
+                </div>
+                <div class="kit-card">
+                  <span class="kit-art">
+                    <svg class="accessory-art" viewBox="0 0 150 100" role="img" aria-label="Illustration of a pneumatic wheel gun">
+                      <ellipse class="item-shadow" cx="77" cy="85" rx="45" ry="6"/>
+                      <path class="dark-metal" d="M31 40h69c6 0 10 4 10 10v9H31z"/>
+                      <path class="metal" d="M36 34h60v12H36z"/>
+                      <path class="dark-metal" d="M56 59h24l-4 23H59z"/>
+                      <path class="accent" d="M39 37h11v15H39z"/>
+                      <path class="metal" d="M99 42h23v7h-23zM121 44h12v4h-12z"/>
+                      <circle cx="68" cy="51" r="4" fill="#d2d9df"/>
+                      <path d="M68 62v13" stroke="#171c21" stroke-width="3" stroke-linecap="round"/>
+                    </svg>
+                  </span><strong>Wheel gun</strong><small>Pneumatic pit tool</small>
+                </div>
+              </div>
+            </div>
+            <p class="kit-note">Vector illustrations for this prototype; tire selection updates the next-compound strategy input.</p>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head">
+            <div class="panel-title">Race control timeline <span class="panel-subtitle">Latest simulation events</span></div>
+            <button class="button small" id="clearEventsBtn">Clear timeline</button>
+          </div>
+          <div class="events-list" id="eventsList" aria-live="polite"></div>
+        </section>
+      </div>
+
+      <aside class="side-column">
+        <section class="panel advisor">
+          <div class="panel-head">
+            <div class="advisor-top"><span class="advisor-icon">✦</span><div class="panel-title">Strategy advisor<span class="panel-subtitle">Local rule-based analysis</span></div></div>
+            <span class="live-label">● ANALYSIS</span>
+          </div>
+          <h2 class="advisor-action" id="recommendationTitle">Recommended: Pit for Intermediates</h2>
+          <p class="advisor-copy" id="recommendationReason"></p>
+          <div class="advisor-facts" id="advisorFacts"></div>
+          <div class="strategy-actions">
+            <button class="button primary" id="pitNowBtn">Pit now</button>
+            <button class="button" id="stayOutBtn">Stay out</button>
+            <button class="button" id="analyzeBtn">⌕ Analyze strategy</button>
+            <button class="button" id="scBtn">Resolve Safety Car</button>
+          </div>
+        </section>
+
+        <section class="panel telemetry-panel" aria-labelledby="telemetryTitle">
+          <div class="panel-head">
+            <div class="panel-title" id="telemetryTitle">Vehicle sensor readings <span class="panel-subtitle">Simulated car data · updates each lap</span></div>
+            <span class="live-label" style="color:var(--amber)">● ESTIMATE</span>
+          </div>
+          <p class="telemetry-note">No vehicle sensors are connected. These illustrative estimates are generated by the local simulation—not live car readings.</p>
+          <div class="sensor-group">
+            <h3 class="sensor-group-title">Fuel &amp; energy</h3>
+            <div class="sensor-grid">
+              <div class="sensor-card"><div class="sensor-topline"><span class="sensor-label">Fuel remaining</span><span class="sensor-value" id="sensorFuel">42.5 <small>kg</small></span></div><div class="sensor-bar"><div class="sensor-bar-fill" id="sensorFuelBar"></div></div><div class="sensor-hint" id="sensorFuelHint">Estimated tank reading</div></div>
+              <div class="sensor-card"><div class="sensor-topline"><span class="sensor-label">Fuel margin</span><span class="sensor-value" id="sensorFuelMargin">+2.7 <small>laps</small></span></div><div class="sensor-bar"><div class="sensor-bar-fill" id="sensorFuelMarginBar"></div></div><div class="sensor-hint">Estimate vs. remaining distance</div></div>
+              <div class="sensor-card"><div class="sensor-topline"><span class="sensor-label">Hybrid battery</span><span class="sensor-value" id="sensorBattery">78 <small>%</small></span></div><div class="sensor-bar"><div class="sensor-bar-fill" id="sensorBatteryBar"></div></div><div class="sensor-hint">Illustrative charge estimate</div></div>
+              <div class="sensor-card"><div class="sensor-topline"><span class="sensor-label">Fuel use / lap</span><span class="sensor-value" id="sensorFuelRate">1.72 <small>kg</small></span></div><div class="sensor-bar"><div class="sensor-bar-fill" id="sensorFuelRateBar"></div></div><div class="sensor-hint">Varies with pace &amp; neutralization</div></div>
+            </div>
+          </div>
+          <div class="sensor-group">
+            <h3 class="sensor-group-title">Tire pressure · estimated psi</h3>
+            <div class="sensor-grid">
+              <div class="sensor-card"><div class="sensor-topline"><span class="sensor-label">Front left</span><span class="sensor-value" id="sensorPressureFL">23.1 <small>psi</small></span></div><div class="sensor-bar"><div class="sensor-bar-fill" id="sensorPressureFLBar"></div></div></div>
+              <div class="sensor-card"><div class="sensor-topline"><span class="sensor-label">Front right</span><span class="sensor-value" id="sensorPressureFR">23.0 <small>psi</small></span></div><div class="sensor-bar"><div class="sensor-bar-fill" id="sensorPressureFRBar"></div></div></div>
+              <div class="sensor-card"><div class="sensor-topline"><span class="sensor-label">Rear left</span><span class="sensor-value" id="sensorPressureRL">21.8 <small>psi</small></span></div><div class="sensor-bar"><div class="sensor-bar-fill" id="sensorPressureRLBar"></div></div></div>
+              <div class="sensor-card"><div class="sensor-topline"><span class="sensor-label">Rear right</span><span class="sensor-value" id="sensorPressureRR">21.9 <small>psi</small></span></div><div class="sensor-bar"><div class="sensor-bar-fill" id="sensorPressureRRBar"></div></div></div>
+            </div>
+          </div>
+          <div class="sensor-group">
+            <h3 class="sensor-group-title">Temperature · illustrative °C</h3>
+            <div class="sensor-grid">
+              <div class="sensor-card"><div class="sensor-topline"><span class="sensor-label">Front tires</span><span class="sensor-value" id="sensorFrontTemp">94 <small>°C</small></span></div><div class="sensor-bar"><div class="sensor-bar-fill" id="sensorFrontTempBar"></div></div></div>
+              <div class="sensor-card"><div class="sensor-topline"><span class="sensor-label">Rear tires</span><span class="sensor-value" id="sensorRearTemp">97 <small>°C</small></span></div><div class="sensor-bar"><div class="sensor-bar-fill" id="sensorRearTempBar"></div></div></div>
+              <div class="sensor-card"><div class="sensor-topline"><span class="sensor-label">Front brakes</span><span class="sensor-value" id="sensorFrontBrake">610 <small>°C</small></span></div><div class="sensor-bar"><div class="sensor-bar-fill" id="sensorFrontBrakeBar"></div></div></div>
+              <div class="sensor-card"><div class="sensor-topline"><span class="sensor-label">Rear brakes</span><span class="sensor-value" id="sensorRearBrake">480 <small>°C</small></span></div><div class="sensor-bar"><div class="sensor-bar-fill" id="sensorRearBrakeBar"></div></div></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head">
+            <div class="panel-title">Weather radar <span class="panel-subtitle">Simulated forecast</span></div>
+            <span class="blue" style="font-size:9px;font-weight:800" id="rainPercent">64%</span>
+          </div>
+          <div class="weather-row">
+            <span class="weather-icon" id="weatherIcon">☀</span>
+            <div class="weather-copy"><strong id="weatherSummary">Rain approaching</strong><small id="weatherSub">Track dry · forecast in 2–4 laps</small></div>
+            <div class="risk-meter"><small>RAIN CHANCE</small><div class="risk-track"><div class="risk-fill" id="rainFill"></div></div></div>
+          </div>
+          <div class="weather-controls" role="group" aria-label="Set simulated track weather">
+            <button class="button weather-choice selected" data-weather="Dry">Dry</button>
+            <button class="button weather-choice" data-weather="Damp">Damp</button>
+            <button class="button weather-choice" data-weather="Wet">Wet</button>
+          </div>
+        </section>
+
+        <section class="panel controls-panel">
+          <div class="panel-head"><div class="panel-title">Race setup <span class="panel-subtitle">Adjust strategy inputs</span></div></div>
+          <div class="choice-list">
+            <div class="field"><label for="compoundSelect">Next tire compound</label><select id="compoundSelect">
+              <option>Soft</option><option selected>Medium</option><option>Hard</option><option>Intermediate</option><option>Wet</option>
+            </select></div>
+            <div class="field"><label for="currentCompound">Fitted tire</label><select id="currentCompound">
+              <option>Soft</option><option selected>Medium</option><option>Hard</option><option>Intermediate</option><option>Wet</option>
+            </select></div>
+          </div>
+          <div class="driving-row">
+            <div class="field"><label>Driving approach</label>
+              <div class="segmented" role="group" aria-label="Driving approach">
+                <button class="button segment" data-driving="Aggressive">Aggressive</button>
+                <button class="button segment selected" data-driving="Balanced">Balanced</button>
+                <button class="button segment" data-driving="Conservative">Conservative</button>
+              </div>
+            </div>
+          </div>
+          <div class="priority-row">
+            <span class="priority-label">Priority</span>
+            <div class="priority-choices" role="group" aria-label="Race priority">
+              <button class="button selected" data-priority="Track position">Track position</button>
+              <button class="button" data-priority="Tire preservation">Tire preservation</button>
+            </div>
+          </div>
+          <div class="wear-control">
+            <div class="wear-control-head"><label for="wearSlider">Tire degradation adjustment</label><strong><span id="wearSliderValue">68</span>% worn</strong></div>
+            <input type="range" id="wearSlider" min="0" max="100" value="68" aria-label="Adjust tire wear">
+          </div>
+          <div class="pit-estimate"><span>Estimated pit-lane time loss</span><strong id="pitLossValue">18.0 s</strong></div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head">
+            <div class="panel-title">Rival watch <span class="panel-subtitle">Illustrative competitor decisions</span></div>
+            <span class="live-label" id="rivalCallsLabel">● 2 PIT CALLS</span>
+          </div>
+          <div class="rivals" id="rivalsList"></div>
+        </section>
+      </aside>
+    </main>
+    <p class="footer-note">Prototype for strategy exploration only. All pace, tire, pit-loss, weather, position, and race-time values are fictional estimates—not live telemetry, official circuit data, or real F1 strategy advice.</p>
+  </div>
+  <div class="race-start-overlay" id="raceStartOverlay" aria-hidden="true">
+    <button class="start-sequence-skip" id="skipStartSequence" type="button">Skip intro</button>
+    <div class="start-overlay-heading">
+      <span>LIGHTS OUT</span>
+      <strong>RACE STARTING</strong>
+      <small id="startOverlayLaps">BAKU CITY CIRCUIT · LAP 31 / 53</small>
+    </div>
+    <div class="screen-racetrack" aria-hidden="true">
+      <div class="screen-race-car" id="screenRaceCar">
+        <svg class="screen-car-svg" viewBox="0 0 180 80" role="img" aria-label="Formula racing car speeding across the screen">
+          <g class="screen-car-wheel">
+            <rect class="screen-car-rubber" x="32" y="46" width="22" height="26" rx="7"/>
+            <path d="M39 51h8m-8 5h8m-8 5h8m-8 5h8" stroke="#82909b" stroke-width="1.5"/>
+          </g>
+          <g class="screen-car-wheel">
+            <rect class="screen-car-rubber" x="123" y="46" width="22" height="26" rx="7"/>
+            <path d="M130 51h8m-8 5h8m-8 5h8m-8 5h8" stroke="#82909b" stroke-width="1.5"/>
+          </g>
+          <path class="screen-car-wing" d="M12 35h22v5H12zm3 5h4v15h-4zm14 0h4v15h-4zM20 55h22v5H20z"/>
+          <path class="screen-car-body" d="M35 42l18-2 11-12h24l12 10 25 2 13 6 24 3v6h-26l-13 7H83l-9-7H57l-8 7H39l-7-8z"/>
+          <path class="screen-car-cockpit" d="M69 40l7-8h16l8 9-7 5H74z"/>
+          <path class="screen-car-trim" d="M143 46h29l7 5h-32zm-106 3h-13v4h14z"/>
+          <path class="screen-car-wing" d="M159 43h17v3h-17zm12 3h4v12h-4z"/>
+        </svg>
+      </div>
+    </div>
+  </div>
+  <div class="toast-region" id="toastRegion" aria-live="polite" aria-atomic="true"></div>
+
+  <script>
+    "use strict";
+
+    const TOTAL_LAPS = 53;
+    const initialRivals = [
+      { name: "A. Norris", team: "Papaya GP", position: 1, compound: "Hard", pitted: false, gap: "—" },
+      { name: "C. Leclerc", team: "Rosso Corse", position: 2, compound: "Medium", pitted: true, gap: "+4.8s" },
+      { name: "G. Russell", team: "Silver Arrow", position: 4, compound: "Soft", pitted: true, gap: "+2.1s" },
+      { name: "F. Alonso", team: "Aston Green", position: 5, compound: "Hard", pitted: false, gap: "+6.4s" }
+    ];
+
+    let state;
+    let raceTimer = null;
+    let carAnimationFrame = null;
+    let previousCarFrameTime = null;
+    let startSequenceTimer = null;
+    let toastTimerIds = [];
+
+    function createInitialState() {
+      return {
+        lap: 31,
+        position: 3,
+        gap: 4.8,
+        wear: 68,
+        fuelKg: 42.5,
+        fuelConsumptionKgPerLap: 1.72,
+        batteryPct: 78,
+        carProgress: 0,
+        currentCompound: "Medium",
+        nextCompound: "Medium",
+        weather: "Dry",
+        rainRisk: 64,
+        safetyCar: "Safety Car",
+        driving: "Balanced",
+        priority: "Track position",
+        isRunning: false,
+        finished: false,
+        pitStops: 1,
+        events: [
+          { lap: 31, text: "<strong>Safety Car deployed.</strong> Incident at Turn 15; field bunching up." },
+          { lap: 31, text: "<strong>Rival strategy split.</strong> P2 and P4 have made unexpected pit stops." },
+          { lap: 31, text: "<strong>Weather watch.</strong> Rain cell approaching; estimated arrival in 2–4 laps." }
+        ],
+        rivals: initialRivals.map(rival => ({ ...rival }))
+      };
+    }
+
+    const $ = id => document.getElementById(id);
+    const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+    const compoundWearFactor = { Soft: 1.28, Medium: 1, Hard: .76, Intermediate: .88, Wet: .82 };
+    const tireClass = compound => compound.toLowerCase();
+
+    function getPitLoss() {
+      const base = 23.5;
+      const neutralizationDiscount = state.safetyCar === "Green Flag" ? 0 : state.safetyCar === "Safety Car" ? 5.5 : 3.2;
+      return Math.max(14, base - neutralizationDiscount);
+    }
+
+    function evaluateStrategy() {
+      const remaining = TOTAL_LAPS - state.lap;
+      const rainSignal = state.rainRisk >= 60 || state.weather === "Damp" || state.weather === "Wet";
+      const wetTiresNeeded = state.weather === "Wet" || (state.rainRisk >= 78 && remaining > 1);
+      let compound = wetTiresNeeded ? "Wet" : (rainSignal ? "Intermediate" : "Hard");
+      let title;
+      let action;
+      let reason;
+
+      if (state.finished) {
+        action = "Race complete";
+        title = "Simulation complete";
+        reason = "The 53-lap fictional race has finished. Reset the simulation to explore another strategy.";
+      } else if (state.wear >= 82 && remaining > 0) {
+        action = "pit";
+        title = "Recommended: Pit now";
+        reason = `Tire wear is at ${state.wear}%, where the estimated pace loss becomes significant. A ${state.safetyCar === "Green Flag" ? "green-flag" : "neutralized"} stop is the safer call${rainSignal ? `; choose ${compound.toLowerCase()} tires for the ${state.weather.toLowerCase()} outlook` : ""}.`;
+      } else if (wetTiresNeeded) {
+        action = "pit";
+        title = `Recommended: Pit for ${compound} tires`;
+        reason = `The track is ${state.weather.toLowerCase()} and rain risk is ${state.rainRisk}%. The current tire is unlikely to be the best fit; the ${state.safetyCar.toLowerCase()} reduces the estimated pit loss to ${getPitLoss().toFixed(1)} seconds.`;
+      } else if (rainSignal && (state.safetyCar !== "Green Flag" || state.rainRisk >= 72 || state.weather === "Damp")) {
+        action = "pit";
+        title = `Recommended: Pit for ${compound} tires`;
+        reason = `Rain risk is increasing (${state.rainRisk}%) and the Safety Car may reduce the effective time loss of a pit stop. Switching before the track gets wetter lowers the risk of losing time on the wrong compound.`;
+      } else if (remaining <= 2 && state.wear < 88) {
+        action = "stay";
+        compound = state.currentCompound;
+        title = "Recommended: Stay out to the flag";
+        reason = `Only ${remaining} lap${remaining === 1 ? "" : "s"} remain. A stop would cost an estimated ${getPitLoss().toFixed(1)} seconds, more than the likely tire pace loss over this short distance.`;
+      } else if (state.wear < 60 && !rainSignal) {
+        action = "stay";
+        compound = state.currentCompound;
+        title = "Recommended: Stay out and reassess";
+        reason = `Tire wear is manageable at ${state.wear}%, and rain risk is not yet decisive. Keep track position and reassess the weather and rivals next lap.`;
+      } else {
+        action = state.priority === "Tire preservation" ? "pit" : "stay";
+        compound = state.priority === "Tire preservation" ? "Hard" : state.currentCompound;
+        title = action === "pit" ? "Recommended: Pit for Hard tires" : "Recommended: Stay out one lap";
+        reason = action === "pit"
+          ? `Your tire-preservation priority favors a fresh Hard set for the remaining ${remaining} laps. The conservative compound limits wear while rain risk remains manageable.`
+          : `Track position is the priority. Keep the current place while the tire has usable life, then reassess after the next lap or any weather change.`;
+      }
+
+      return { action, compound, title, reason, remaining, rainSignal };
+    }
+
+    function calculateStrategies() {
+      const remaining = TOTAL_LAPS - state.lap;
+      const pitLoss = getPitLoss();
+      const wearPacePenalty = Math.max(0, state.wear - 45) * .16;
+      const wetPenalty = state.weather === "Wet" && !["Wet", "Intermediate"].includes(state.currentCompound) ? 1.6 : 0;
+      const freshTireCredit = state.wear * .035;
+      const lapBaseline = 102.4 + (state.weather === "Wet" ? 8 : state.weather === "Damp" ? 3.5 : 0);
+      const plans = [
+        {
+          id: "A", name: "Pit immediately", action: "pit",
+          compound: state.weather === "Wet" ? "Wet" : state.rainRisk >= 55 || state.weather === "Damp" ? "Intermediate" : "Hard",
+          description: "Take the pit window now; fit a tire suited to the current forecast.",
+          extra: pitLoss + Math.max(0, remaining - 1) * Math.max(0, wearPacePenalty - freshTireCredit)
+        },
+        {
+          id: "B", name: "Stay out & reassess", action: "stay",
+          compound: state.currentCompound,
+          description: "Protect track position and review the call after one more lap.",
+          extra: remaining * (wearPacePenalty + wetPenalty) + (state.rainRisk >= 75 ? 10 : 0)
+        },
+        {
+          id: "C", name: "Wait for weather", action: "wait",
+          compound: state.weather === "Wet" ? "Wet" : "Intermediate",
+          description: "Delay the stop for a clearer rain signal; timing risk is higher.",
+          extra: pitLoss + Math.max(0, remaining - 2) * Math.max(0, wearPacePenalty - freshTireCredit) + (state.rainRisk > 55 ? 4 + state.rainRisk * .07 : 0)
+        }
+      ];
+
+      return plans.map((plan, index) => {
+        const estimatedTime = remaining * lapBaseline + plan.extra;
+        const relative = plan.extra - Math.min(...plans.map(item => item.extra));
+        const position = clamp(state.position + (relative > 12 ? 1 : relative < -7 ? -1 : 0), 1, 20);
+        const riskCount = index === 0
+          ? (state.safetyCar === "Green Flag" ? 2 : 1) + (state.weather === "Wet" && plan.compound !== "Wet" ? 2 : 0)
+          : index === 1
+            ? (state.wear > 75 ? 3 : 1) + (state.rainRisk > 70 ? 2 : 0)
+            : 2 + (state.rainRisk > 60 ? 1 : 0);
+        return { ...plan, estimatedTime, position, riskCount: clamp(riskCount, 1, 5) };
+      });
+    }
+
+    function addEvent(text) {
+      state.events.unshift({ lap: state.lap, text });
+      state.events = state.events.slice(0, 16);
+      renderEvents();
+    }
+
+    function notify(title, message, success = false) {
+      const toast = document.createElement("div");
+      toast.className = `toast${success ? " success" : ""}`;
+      toast.innerHTML = `<strong>${title}</strong>${message}`;
+      $("toastRegion").appendChild(toast);
+      const timer = window.setTimeout(() => {
+        toast.remove();
+        toastTimerIds = toastTimerIds.filter(id => id !== timer);
+      }, 4200);
+      toastTimerIds.push(timer);
+    }
+
+    function renderAdvisor() {
+      const result = evaluateStrategy();
+      $("recommendationTitle").textContent = result.title;
+      $("recommendationReason").textContent = result.reason;
+      const statusText = state.safetyCar === "Green Flag" ? "Green Flag" : state.safetyCar;
+      $("advisorFacts").innerHTML = [
+        `Laps remaining: ${result.remaining}`,
+        `Pit loss est.: ${getPitLoss().toFixed(1)}s`,
+        `${statusText}`,
+        `Rain risk: ${state.rainRisk}%`
+      ].map(fact => `<span class="fact-chip">${fact}</span>`).join("");
+      $("pitNowBtn").textContent = state.finished ? "Race complete" : `Pit for ${result.action === "pit" ? result.compound : $("compoundSelect").value}`;
+      $("pitNowBtn").disabled = state.finished;
+      $("stayOutBtn").disabled = state.finished;
+      $("scBtn").textContent = state.safetyCar === "Green Flag" ? "Deploy Safety Car" : "Resolve Safety Car";
+      $("scBtn").disabled = state.finished;
+    }
+
+    function renderStrategies() {
+      const plans = calculateStrategies();
+      const recommended = evaluateStrategy();
+      $("strategyCards").innerHTML = plans.map(plan => {
+        const isRecommended = (recommended.action === "pit" && plan.id === "A")
+          || (recommended.action === "stay" && plan.id === "B")
+          || (recommended.action === "wait" && plan.id === "C");
+        const riskLabel = plan.riskCount <= 2 ? "LOW" : plan.riskCount <= 3 ? "MED" : "HIGH";
+        return `<article class="strategy-card${isRecommended ? " recommended" : ""}">
+          <div class="strategy-card-top"><h3>Strategy ${plan.id}: ${plan.name}</h3>${isRecommended ? '<span class="strategy-badge">Best fit</span>' : ""}</div>
+          <p class="strategy-description">${plan.description}</p>
+          <div class="strategy-stats">
+            <div class="strategy-stat"><small>Est. time</small><strong>${(plan.estimatedTime / 60).toFixed(1)} min</strong></div>
+            <div class="strategy-stat"><small>Projected</small><strong>P${plan.position}</strong></div>
+            <div class="strategy-stat"><small>Next tire</small><strong>${plan.compound}</strong></div>
+          </div>
+          <div class="strategy-risk"><span>TIRE / TIMING RISK</span><strong class="risk-dots">${"●".repeat(plan.riskCount)}<span style="color:#343c44">${"●".repeat(5 - plan.riskCount)}</span> <span class="${riskLabel === "LOW" ? "green" : riskLabel === "HIGH" ? "red" : "amber"}">${riskLabel}</span></strong></div>
+          <button class="button${isRecommended ? " primary" : ""}" data-plan="${plan.id}">Apply Strategy ${plan.id}</button>
+        </article>`;
+      }).join("");
+      document.querySelectorAll("[data-plan]").forEach(button => button.addEventListener("click", () => applyPlan(button.dataset.plan)));
+    }
+
+    function renderRivals() {
+      $("rivalsList").innerHTML = state.rivals.map(rival => `<div class="rival-row">
+        <span class="rival-pos">P${rival.position}</span>
+        <span class="rival-name">${rival.name}<small>${rival.team}</small></span>
+        <span><i class="tire-mini ${tireClass(rival.compound)}"></i>${rival.compound}</span>
+        <span class="rival-status${rival.pitted ? " pitted" : ""}">${rival.pitted ? "PITTED" : rival.gap}</span>
+      </div>`).join("");
+      $("rivalCallsLabel").textContent = `● ${state.rivals.filter(rival => rival.pitted).length} PIT CALLS`;
+    }
+
+    function renderEvents() {
+      $("eventsList").innerHTML = state.events.length
+        ? state.events.map(event => `<div class="event"><span class="event-time">LAP ${event.lap}</span><span class="event-text">${event.text}</span></div>`).join("")
+        : '<div class="event"><span class="event-time">—</span><span class="event-text">No events yet. Start the simulation to see race control updates.</span></div>';
+    }
+
+    function getVehicleReadings() {
+      const weatherOffset = state.weather === "Wet" ? -20 : state.weather === "Damp" ? -9 : 0;
+      const drivingOffset = state.driving === "Aggressive" ? 6 : state.driving === "Conservative" ? -5 : 0;
+      const wearOffset = state.wear > 75 ? 3 : 0;
+      const frontTemp = clamp(94 + weatherOffset + drivingOffset + wearOffset, 45, 145);
+      const rearTemp = clamp(frontTemp + 3, 45, 145);
+      const pressureFromTemp = temp => clamp(22.2 + (temp - 90) * .025 + (state.weather === "Wet" ? -.3 : 0), 18, 30);
+      const projectedGreenFlagUse = 1.72 * (state.driving === "Aggressive" ? 1.08 : state.driving === "Conservative" ? .93 : 1);
+      const fuelLaps = projectedGreenFlagUse > 0 ? state.fuelKg / projectedGreenFlagUse : 0;
+      const remainingLaps = TOTAL_LAPS - state.lap;
+      const brakePaceFactor = state.safetyCar === "Green Flag" ? 1 : state.safetyCar === "Safety Car" ? .72 : .84;
+      const brakeWeatherOffset = state.weather === "Wet" ? -90 : state.weather === "Damp" ? -45 : 0;
+      return {
+        fuelKg: state.fuelKg,
+        fuelMarginLaps: fuelLaps - remainingLaps,
+        fuelConsumption: state.fuelConsumptionKgPerLap,
+        batteryPct: state.batteryPct,
+        pressureFL: pressureFromTemp(frontTemp) + .25,
+        pressureFR: pressureFromTemp(frontTemp) + .15,
+        pressureRL: pressureFromTemp(rearTemp) - .35,
+        pressureRR: pressureFromTemp(rearTemp) - .25,
+        frontTemp,
+        rearTemp,
+        frontBrake: clamp((610 + (state.driving === "Aggressive" ? 80 : 0) + brakeWeatherOffset) * brakePaceFactor, 180, 950),
+        rearBrake: clamp((480 + (state.driving === "Aggressive" ? 55 : 0) + brakeWeatherOffset) * brakePaceFactor, 150, 850)
+      };
+    }
+
+    function renderVehicleSensors() {
+      const readings = getVehicleReadings();
+      const setReading = (name, value, unit, percent, color) => {
+        $(`sensor${name}`).innerHTML = `${value}<small>${unit}</small>`;
+        const bar = $(`sensor${name}Bar`);
+        bar.style.width = `${clamp(percent, 0, 100)}%`;
+        bar.style.backgroundColor = color;
+      };
+      const green = "var(--green)";
+      const amber = "var(--amber)";
+      const red = "var(--red-bright)";
+
+      setReading("Fuel", readings.fuelKg.toFixed(1), "kg", readings.fuelKg / 60 * 100, readings.fuelMarginLaps < 0 ? red : readings.fuelMarginLaps < 1 ? amber : green);
+      const marginColor = readings.fuelMarginLaps < 0 ? red : readings.fuelMarginLaps < 1 ? amber : green;
+      setReading("FuelMargin", `${readings.fuelMarginLaps >= 0 ? "+" : ""}${readings.fuelMarginLaps.toFixed(1)}`, "laps", (readings.fuelMarginLaps + 2) / 6 * 100, marginColor);
+      setReading("Battery", Math.round(readings.batteryPct), "%", readings.batteryPct, readings.batteryPct < 20 ? red : readings.batteryPct < 40 ? amber : green);
+      setReading("FuelRate", readings.fuelConsumption.toFixed(2), "kg", readings.fuelConsumption / 2.5 * 100, readings.fuelConsumption > 2 ? amber : green);
+
+      ["FL", "FR", "RL", "RR"].forEach(corner => {
+        const pressure = readings[`pressure${corner}`];
+        const pressureColor = pressure < 20 || pressure > 27 ? amber : green;
+        setReading(`Pressure${corner}`, pressure.toFixed(1), "psi", (pressure - 18) / 10 * 100, pressureColor);
+      });
+      setReading("FrontTemp", Math.round(readings.frontTemp), "°C", readings.frontTemp / 150 * 100, readings.frontTemp > 125 ? red : readings.frontTemp > 110 ? amber : green);
+      setReading("RearTemp", Math.round(readings.rearTemp), "°C", readings.rearTemp / 150 * 100, readings.rearTemp > 125 ? red : readings.rearTemp > 110 ? amber : green);
+      setReading("FrontBrake", Math.round(readings.frontBrake), "°C", readings.frontBrake / 1000 * 100, readings.frontBrake > 800 ? red : readings.frontBrake > 680 ? amber : green);
+      setReading("RearBrake", Math.round(readings.rearBrake), "°C", readings.rearBrake / 1000 * 100, readings.rearBrake > 720 ? red : readings.rearBrake > 600 ? amber : green);
+      $("sensorFuelHint").textContent = `Estimated tank reading · ${readings.fuelKg <= 0 ? "reserve exhausted" : "simulation scale"}`;
+      $("sensorFuelMargin").className = `sensor-value ${readings.fuelMarginLaps < 0 ? "red" : readings.fuelMarginLaps < 1 ? "amber" : "green"}`;
+    }
+
+    // Move the car marker along the schematic circuit only while the race is running.
+    function updateCarMarker() {
+      const path = $("carMotionPath");
+      const marker = $("raceCarMarker");
+      const length = path.getTotalLength();
+      const distance = (state.carProgress % 1) * length;
+      const point = path.getPointAtLength(distance);
+      const pointAhead = path.getPointAtLength(distance + 1 <= length ? distance + 1 : 0);
+      const angle = Math.atan2(pointAhead.y - point.y, pointAhead.x - point.x) * 180 / Math.PI;
+      marker.setAttribute("transform", `translate(${point.x} ${point.y}) rotate(${angle})`);
+    }
+
+    function animateCar(timestamp) {
+      if (!state.isRunning) {
+        carAnimationFrame = null;
+        previousCarFrameTime = null;
+        return;
+      }
+      if (previousCarFrameTime !== null) {
+        const elapsed = Math.min(timestamp - previousCarFrameTime, 100);
+        state.carProgress = (state.carProgress + elapsed * 0.000045) % 1;
+      }
+      previousCarFrameTime = timestamp;
+      updateCarMarker();
+      carAnimationFrame = window.requestAnimationFrame(animateCar);
+    }
+
+    function startCarAnimation() {
+      if (carAnimationFrame !== null) return;
+      previousCarFrameTime = null;
+      carAnimationFrame = window.requestAnimationFrame(animateCar);
+    }
+
+    function stopCarAnimation() {
+      if (carAnimationFrame !== null) window.cancelAnimationFrame(carAnimationFrame);
+      carAnimationFrame = null;
+      previousCarFrameTime = null;
+    }
+
+    function hideStartSequence() {
+      if (startSequenceTimer !== null) window.clearTimeout(startSequenceTimer);
+      startSequenceTimer = null;
+      $("raceStartOverlay").classList.remove("active");
+      $("raceStartOverlay").setAttribute("aria-hidden", "true");
+    }
+
+    function showStartSequence() {
+      const overlay = $("raceStartOverlay");
+      $("startOverlayLaps").textContent = `BAKU CITY CIRCUIT · LAP ${state.lap} / ${TOTAL_LAPS}`;
+      hideStartSequence();
+      overlay.classList.remove("active");
+      void $("screenRaceCar").offsetWidth;
+      overlay.setAttribute("aria-hidden", "false");
+      overlay.classList.add("active");
+      startSequenceTimer = window.setTimeout(hideStartSequence, 2500);
+    }
+
+    function render() {
+      const progress = (state.lap / TOTAL_LAPS) * 100;
+      $("lapValue").textContent = state.lap;
+      $("progressText").textContent = `${Math.round(progress)}%`;
+      $("progressFill").style.width = `${progress}%`;
+      $("positionValue").innerHTML = `P${state.position} <small>/ 20</small>`;
+      $("gapValue").innerHTML = `+${state.gap.toFixed(1)}<small>s</small>`;
+      $("wearValue").innerHTML = `${state.wear}<small>% worn</small>`;
+      $("tireLabel").textContent = `${state.currentCompound} · ${state.wear >= 80 ? "critical" : state.wear >= 60 ? "used" : "healthy"}`;
+      $("tireLabel").className = `metric-note${state.wear >= 80 ? " red" : state.wear >= 60 ? " amber" : " green"}`;
+      $("trackWeatherValue").textContent = state.weather.toUpperCase();
+      $("rainValue").textContent = `Rain risk ${state.rainRisk}%`;
+      $("rainPercent").textContent = `${state.rainRisk}%`;
+      $("rainFill").style.width = `${state.rainRisk}%`;
+      $("weatherIcon").textContent = state.weather === "Wet" ? "🌧" : state.weather === "Damp" || state.rainRisk > 75 ? "🌦" : "☀";
+      $("weatherSummary").textContent = state.weather === "Wet" ? "Rain on circuit" : state.weather === "Damp" ? "Light rain / damp track" : state.rainRisk >= 60 ? "Rain approaching" : "Mostly clear";
+      $("weatherSub").textContent = state.weather === "Dry" ? (state.rainRisk >= 60 ? "Track dry · forecast developing" : "Track dry · no immediate rain") : `Track ${state.weather.toLowerCase()} · simulated conditions`;
+      $("wearSlider").value = state.wear;
+      $("wearSliderValue").textContent = state.wear;
+      $("pitLossValue").textContent = `${getPitLoss().toFixed(1)} s`;
+      $("raceStatus").textContent = state.safetyCar.toUpperCase();
+      $("raceStatusNote").textContent = state.safetyCar === "Green Flag" ? "Full racing conditions" : "Deployed · reduced pace";
+      $("statusDot").className = `status-dot${state.safetyCar === "Safety Car" ? " sc" : state.safetyCar === "Virtual Safety Car" ? " vsc" : ""}`;
+      $("runStatus").textContent = state.finished ? "FINISHED" : state.isRunning ? "RUNNING" : "PAUSED";
+      $("trackPanel").classList.toggle("is-racing", state.isRunning);
+      $("carViewScene").classList.toggle("is-racing", state.isRunning);
+      $("carViewStatusText").textContent = state.finished ? "CHEQUERED FLAG" : state.isRunning ? "RACING · LIVE SIMULATION" : "CAR IN GARAGE";
+      $("carMotionText").textContent = state.isRunning ? "CAR ON TRACK · MOVING" : state.finished ? "CHEQUERED FLAG" : "CAR READY";
+      updateCarMarker();
+      $("startBtn").disabled = state.isRunning || state.finished;
+      $("pauseBtn").disabled = !state.isRunning;
+      $("startBtn").textContent = state.finished ? "Race Finished" : state.lap === 31 && !state.isRunning ? "▶ Start Race" : "▶ Resume Race";
+      document.querySelectorAll("[data-weather]").forEach(button => button.classList.toggle("selected", button.dataset.weather === state.weather));
+      document.querySelectorAll("[data-driving]").forEach(button => button.classList.toggle("selected", button.dataset.driving === state.driving));
+      document.querySelectorAll("[data-priority]").forEach(button => button.classList.toggle("selected", button.dataset.priority === state.priority));
+      document.querySelectorAll("[data-gallery-compound]").forEach(button => {
+        const selected = button.dataset.galleryCompound === state.nextCompound;
+        button.classList.toggle("selected", selected);
+        button.setAttribute("aria-pressed", String(selected));
+      });
+      $("currentCompound").value = state.currentCompound;
+      $("compoundSelect").value = state.nextCompound;
+      renderAdvisor();
+      renderStrategies();
+      renderRivals();
+      renderVehicleSensors();
+    }
+
+    function doPitStop(compound) {
+      if (state.finished) return;
+      const loss = getPitLoss();
+      state.pitStops += 1;
+      state.currentCompound = compound;
+      state.nextCompound = compound;
+      state.wear = 8;
+      state.gap = Math.max(.8, state.gap + loss / 5 - (state.safetyCar === "Green Flag" ? 0 : 1.2));
+      state.position = clamp(state.position + (state.safetyCar === "Green Flag" && loss > 21 ? 1 : 0), 1, 20);
+      addEvent(`<strong>Pit stop.</strong> Fitted ${compound} tires; estimated time loss ${loss.toFixed(1)}s. Tire wear reset to 8%.`);
+      notify("Pit stop complete", `${compound} tires fitted · estimated ${loss.toFixed(1)}s loss.`, true);
+      render();
+    }
+
+    function stayOut() {
+      if (state.finished) return;
+      addEvent("<strong>Stay out.</strong> Driver retains track position; strategy will be reassessed next lap.");
+      notify("Stay out", "Track position retained. Recommendation recalculated for the next decision.");
+      render();
+    }
+
+    function applyPlan(id) {
+      const plan = calculateStrategies().find(item => item.id === id);
+      if (!plan) return;
+      if (plan.action === "pit") {
+        $("compoundSelect").value = plan.compound;
+        state.nextCompound = plan.compound;
+        doPitStop(plan.compound);
+      } else if (plan.action === "stay") {
+        stayOut();
+      } else {
+        state.nextCompound = plan.compound;
+        $("compoundSelect").value = plan.compound;
+        addEvent(`<strong>Weather watch selected.</strong> Hold the stop until the next forecast check; target ${plan.compound} tires.`);
+        notify("Weather strategy selected", `Hold for the next forecast update; target ${plan.compound} tires.`);
+        render();
+      }
+    }
+
+    function advanceLap() {
+      if (state.finished) {
+        notify("Race finished", "Reset the simulation to run another strategy scenario.");
+        return;
+      }
+      if (state.lap >= TOTAL_LAPS) {
+        finishRace();
+        return;
+      }
+      state.lap += 1;
+      const drivingFactor = state.driving === "Aggressive" ? 1.3 : state.driving === "Conservative" ? .72 : 1;
+      const trackFactor = state.weather === "Wet" && !["Wet", "Intermediate"].includes(state.currentCompound) ? 1.35 : state.weather === "Damp" && state.currentCompound === "Soft" ? 1.15 : 1;
+      const neutralFactor = state.safetyCar === "Green Flag" ? 1 : state.safetyCar === "Safety Car" ? .56 : .7;
+      state.wear = clamp(Math.round(state.wear + 3.4 * (compoundWearFactor[state.currentCompound] || 1) * drivingFactor * trackFactor * neutralFactor), 0, 100);
+      state.gap = Math.max(.6, state.gap + (state.safetyCar === "Green Flag" ? (Math.random() - .45) * 1.2 : (Math.random() - .5) * .45));
+      state.rainRisk = clamp(state.rainRisk + (state.weather === "Dry" ? 3 : -1), 0, 95);
+
+      if (state.safetyCar !== "Green Flag" && state.lap >= 33) {
+        state.safetyCar = "Green Flag";
+        addEvent("<strong>Safety Car in this lap.</strong> Racing resumes; pit lane time loss returns to green-flag estimate.");
+        notify("Green flag", "The Safety Car has returned to the pits.", true);
+      } else if (state.safetyCar === "Green Flag" && state.lap === 40 && Math.random() < .22) {
+        state.safetyCar = "Virtual Safety Car";
+        addEvent("<strong>Virtual Safety Car deployed.</strong> A stopped car requires recovery.");
+        notify("Virtual Safety Car", "Neutralized pace may create a lower-loss pit window.");
+      }
+
+      if (state.lap === 34 && state.weather === "Dry" && state.rainRisk >= 70) {
+        addEvent("<strong>Weather update.</strong> Rain risk has climbed; track remains dry for now.");
+        notify("Rain watch", `Rain risk now ${state.rainRisk}%. Track remains dry.`);
+      }
+
+      if (state.lap % 5 === 0 && state.rivals.some(rival => !rival.pitted)) {
+        const rival = state.rivals.find(item => !item.pitted);
+        if (rival) {
+          rival.pitted = true;
+          rival.compound = state.rainRisk > 70 ? "Intermediate" : "Hard";
+          addEvent(`<strong>${rival.name} pits.</strong> ${rival.team} switch to ${rival.compound}; rival strategy shifts.`);
+          notify("Rival pit call", `${rival.name} has pitted for ${rival.compound} tires.`);
+        }
+      }
+
+      if (state.wear >= 90) {
+        state.position = clamp(state.position + 1, 1, 20);
+        addEvent("<strong>Tire performance warning.</strong> Severe wear is costing estimated pace and a position.");
+        notify("Tire wear critical", "Pit soon to limit further estimated pace loss.");
+      }
+
+      const drivingFuelFactor = state.driving === "Aggressive" ? 1.08 : state.driving === "Conservative" ? .93 : 1;
+      const baseFuelUse = state.safetyCar === "Green Flag" ? 1.72 : state.safetyCar === "Safety Car" ? 1.12 : 1.38;
+      state.fuelConsumptionKgPerLap = baseFuelUse * drivingFuelFactor;
+      state.fuelKg = Math.max(0, state.fuelKg - state.fuelConsumptionKgPerLap);
+      const batteryChange = state.safetyCar === "Green Flag" ? -0.8 : 1.1;
+      state.batteryPct = clamp(state.batteryPct + batteryChange + (state.driving === "Aggressive" ? -0.6 : state.driving === "Conservative" ? .2 : 0), 5, 100);
+
+      if (state.lap >= TOTAL_LAPS) finishRace();
+      render();
+    }
+
+    function finishRace() {
+      state.lap = TOTAL_LAPS;
+      state.isRunning = false;
+      state.finished = true;
+      if (raceTimer) window.clearInterval(raceTimer);
+      raceTimer = null;
+      stopCarAnimation();
+      addEvent(`<strong>Chequered flag.</strong> Fictional race complete; estimated finish P${state.position}.`);
+      notify("Chequered flag", `Simulation complete. Estimated finish: P${state.position}.`, true);
+      render();
+    }
+
+    function startRace() {
+      if (state.finished || state.isRunning) return;
+      state.isRunning = true;
+      startCarAnimation();
+      showStartSequence();
+      addEvent("<strong>Simulation running.</strong> Auto-advance enabled; use Pause to stop the clock.");
+      raceTimer = window.setInterval(advanceLap, 5000);
+      notify("Race simulation started", "The race will advance one simulated lap every five seconds.", true);
+      render();
+    }
+
+    function pauseRace() {
+      if (!state.isRunning) return;
+      state.isRunning = false;
+      stopCarAnimation();
+      if (raceTimer) window.clearInterval(raceTimer);
+      raceTimer = null;
+      addEvent("<strong>Simulation paused.</strong> Race clock stopped.");
+      notify("Race paused", "Use Resume Race or Next Lap to continue.");
+      render();
+    }
+
+    function resetSimulation() {
+      if (raceTimer) window.clearInterval(raceTimer);
+      raceTimer = null;
+      stopCarAnimation();
+      hideStartSequence();
+      state = createInitialState();
+      $("toastRegion").replaceChildren();
+      render();
+      notify("Simulation reset", "Restored the Lap 31 Baku scenario.", true);
+    }
+
+    function toggleSafetyCar() {
+      if (state.safetyCar === "Green Flag") {
+        state.safetyCar = "Safety Car";
+        addEvent("<strong>Safety Car deployed manually.</strong> Field pace reduced; pit loss estimate updated.");
+        notify("Safety Car deployed", "Pit-loss estimate has been recalculated.");
+      } else {
+        state.safetyCar = "Green Flag";
+        addEvent("<strong>Safety Car resolved manually.</strong> Green-flag racing resumes.");
+        notify("Green flag", "Full racing conditions restored.", true);
+      }
+      render();
+    }
+
+    function analyze() {
+      const result = evaluateStrategy();
+      addEvent(`<strong>Strategy analysis.</strong> ${result.title}. ${result.reason}`);
+      notify("Analysis updated", result.title.replace("Recommended: ", ""), true);
+      render();
+    }
+
+    $("startBtn").addEventListener("click", startRace);
+    $("pauseBtn").addEventListener("click", pauseRace);
+    $("nextLapBtn").addEventListener("click", advanceLap);
+    $("resetBtn").addEventListener("click", resetSimulation);
+    $("pitNowBtn").addEventListener("click", () => {
+      const result = evaluateStrategy();
+      doPitStop(result.action === "pit" ? result.compound : $("compoundSelect").value);
+    });
+    $("stayOutBtn").addEventListener("click", stayOut);
+    $("analyzeBtn").addEventListener("click", analyze);
+    $("scBtn").addEventListener("click", toggleSafetyCar);
+    document.querySelectorAll("[data-car-camera]").forEach(button => button.addEventListener("click", () => {
+      const camera = button.dataset.carCamera;
+      const scene = $("carViewScene");
+      scene.classList.remove("camera-front", "camera-side", "camera-overhead");
+      scene.classList.add(`camera-${camera}`);
+      document.querySelectorAll("[data-car-camera]").forEach(cameraButton => {
+        const selected = cameraButton === button;
+        cameraButton.classList.toggle("selected", selected);
+        cameraButton.setAttribute("aria-pressed", String(selected));
+      });
+    }));
+    $("screenRaceCar").addEventListener("animationend", event => {
+      if (event.animationName === "cross-screen") hideStartSequence();
+    });
+    $("skipStartSequence").addEventListener("click", hideStartSequence);
+    $("clearEventsBtn").addEventListener("click", () => {
+      state.events = [];
+      renderEvents();
+      notify("Timeline cleared", "New race events will appear here.");
+    });
+    $("wearSlider").addEventListener("input", event => {
+      state.wear = Number(event.target.value);
+      render();
+    });
+    $("compoundSelect").addEventListener("change", event => {
+      state.nextCompound = event.target.value;
+      render();
+    });
+    document.querySelectorAll("[data-gallery-compound]").forEach(button => button.addEventListener("click", () => {
+      state.nextCompound = button.dataset.galleryCompound;
+      addEvent(`<strong>Next tire selected.</strong> ${state.nextCompound} tires chosen from the gallery.`);
+      notify("Tire selection updated", `${state.nextCompound} is selected as the next compound.`, true);
+      render();
+    }));
+    $("currentCompound").addEventListener("change", event => {
+      state.currentCompound = event.target.value;
+      addEvent(`<strong>Tire input changed.</strong> Current tire set to ${state.currentCompound} for this simulation.`);
+      render();
+    });
+    document.querySelectorAll("[data-weather]").forEach(button => button.addEventListener("click", () => {
+      const oldWeather = state.weather;
+      state.weather = button.dataset.weather;
+      if (state.weather === "Wet") state.rainRisk = Math.max(state.rainRisk, 85);
+      if (state.weather === "Dry") state.rainRisk = Math.min(state.rainRisk, 55);
+      if (oldWeather !== state.weather) {
+        addEvent(`<strong>Weather changed.</strong> Simulated track conditions are now ${state.weather.toLowerCase()}.`);
+        notify("Weather updated", `Track conditions set to ${state.weather.toLowerCase()}.`);
+      }
+      render();
+    }));
+    document.querySelectorAll("[data-driving]").forEach(button => button.addEventListener("click", () => {
+      state.driving = button.dataset.driving;
+      render();
+    }));
+    document.querySelectorAll("[data-priority]").forEach(button => button.addEventListener("click", () => {
+      state.priority = button.dataset.priority;
+      render();
+    }));
+
+    state = createInitialState();
+    render();
+  </script>
+</body>
+</html>
